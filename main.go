@@ -1,7 +1,7 @@
 package main
 
 import (
-	"container/list"
+	"errors"
 	"fmt"
 	"html/template"
 	"net/http"
@@ -34,6 +34,7 @@ func signinSubmit(w http.ResponseWriter, r *http.Request) {
 
 	if userDB[username] == password {
 		w.WriteHeader(http.StatusOK)
+		http.Redirect(w,r, "/booking", http.StatusFound)
 		fmt.Fprint(w, "Ok")
 	} else {
 		w.WriteHeader(http.StatusNotFound)
@@ -42,22 +43,37 @@ func signinSubmit(w http.ResponseWriter, r *http.Request) {
 	fmt.Println(username, password)
 }
 
+//estrutura de dados
+type Queue struct {
+	Tickets []int
+}
+
+//Add tiket at the end
+func (q *Queue) Enqueue(ticket int) {
+	q.Tickets = append(q.Tickets, ticket)
+}
+
+//Returns the first ticket
+func (q *Queue) Dequeue() (int, error) {
+	if len(q.Tickets) == 0 {
+		return 0, errors.New("Empty queue")
+	}
+	var firstTicket int
+	firstTicket, q.Tickets = q.Tickets[0], q.Tickets[1:]
+	return firstTicket, nil
+}
 
 func bookingWithTicket(w http.ResponseWriter, r *http.Request) {
-	var queue = list.New()
-	// Append
-	queue.PushBack(1)
-	queue.PushBack(2)
-	queue.PushBack(3)
-	queue.PushBack(4)
-	queue.PushBack(5)
-	queue.PushBack(6)
-
-	// Dequeue, remove from the front
-	front := queue.Front()
-	fmt.Println(front.Value)
-	// Avoid memory leaks by removing the first element
-	queue.Remove(front)
+	queue := Queue{}
+	queue.Enqueue(1)
+	//ticket, _ := queue.Dequeue()
+	//fmt.Println(ticket)
+	//queue.Enqueue(2)
+	//ticket, _ = queue.Dequeue()
+	//fmt.Println(ticket)
+	//queue.Enqueue(3)
+	//ticket, _ = queue.Dequeue()
+	//fmt.Println(ticket)
 
 	var fileName = "booking.html"
 	t, err := template.ParseFiles(fileName)
@@ -67,7 +83,6 @@ func bookingWithTicket(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("Error when executing template booking")
 		return
 	}
-
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
@@ -81,16 +96,12 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	case "/booking":
 		bookingWithTicket(w, r)
 	}
-
 	fmt.Printf("Handling function %s request\n", r.Method)
 }
 
 func main() {
 	http.HandleFunc("/", handler)
 	http.ListenAndServe("", nil)
-	//Security - https
-	//http.ListenAndServeTLS("", "cert.pem", "key.pem", nil)
-
 }
 
 //function with html as an example
